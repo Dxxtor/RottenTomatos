@@ -13,14 +13,15 @@ if (!defined('SITE_ROOT')) {
 // =============================================================================
 // DATABASE CREDENTIALS
 // =============================================================================
-// define() creates a constant: a value that cannot change during the script.
-// In XAMPP, MySQL default user is "root" and password is empty.
-// DB_NAME must match the database you create in phpMyAdmin (e.g. fresh_potatos).
+// Support both Railway hosting (environment variables) and XAMPP local
+// Railway uses MYSQLHOST, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE, MYSQLPORT
+// XAMPP uses localhost, root, empty password
 // =============================================================================
-define('DB_HOST', 'localhost');        // Where MySQL runs (localhost = same machine)
-define('DB_USER', 'root');             // MySQL username (XAMPP default)
-define('DB_PASS', '');                 // MySQL password (empty for XAMPP default)
-define('DB_NAME', 'fresh_potatos');    // Name of our movie database
+define('DB_HOST', getenv('MYSQLHOST') ?: 'localhost');
+define('DB_USER', getenv('MYSQLUSER') ?: 'root');
+define('DB_PASS', getenv('MYSQLPASSWORD') ?: '');
+define('DB_NAME', getenv('MYSQLDATABASE') ?: 'fresh_potatos');
+define('DB_PORT', getenv('MYSQLPORT') ?: 3306);
 
 // =============================================================================
 // SITE SETTINGS
