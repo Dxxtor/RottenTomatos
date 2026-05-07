@@ -37,19 +37,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($password !== $confirm) {
             $error = 'Passwords do not match.';
         } else {
-        // Check if username already exists
-        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
-        $stmt->execute([$username]);
-        if ($stmt->fetch()) {
-            $error = 'Username already taken.';
-        } else {
-            // Hash the password and insert
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'user')");
-            if ($stmt->execute([$username, $hash, $email])) {
-                $success = 'Account created! You can now login.';
+            // Check if username already exists
+            $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                $error = 'Username already taken.';
             } else {
-                $error = 'Could not create account. Please try again.';
+                // Hash the password and insert
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'user')");
+                if ($stmt->execute([$username, $hash, $email])) {
+                    $success = 'Account created! You can now login.';
+                } else {
+                    $error = 'Could not create account. Please try again.';
+                }
             }
         }
     }
