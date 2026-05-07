@@ -109,10 +109,7 @@ function getPosterSrc($poster) {
 // getDbConnection() - Create and return a MySQL connection using PDO
 // =============================================================================
 function getDbConnection() {
-    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-    if (defined('DB_PORT') && DB_PORT != 3306) {
-        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-    }
+    $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     
     try {
         $pdo = new PDO($dsn, DB_USER, DB_PASS);
@@ -120,21 +117,6 @@ function getDbConnection() {
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $pdo;
     } catch (PDOException $e) {
-        // If database doesn't exist, try to create it
-        if (strpos($e->getMessage(), 'Unknown database') !== false) {
-            try {
-                $dsnNoDb = "mysql:host=" . DB_HOST . ";charset=utf8mb4";
-                if (defined('DB_PORT') && DB_PORT != 3306) {
-                    $dsnNoDb = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";charset=utf8mb4";
-                }
-                $pdo = new PDO($dsnNoDb, DB_USER, DB_PASS);
-                $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-                $pdo->exec("USE `" . DB_NAME . "`");
-                return $pdo;
-            } catch (PDOException $e2) {
-                die('Database connection failed: ' . $e2->getMessage());
-            }
-        }
         die('Database connection failed: ' . $e->getMessage());
     }
 }
