@@ -12,9 +12,10 @@ if ($genreSlug === '') {
 require_once __DIR__ . '/config.php';
 $conn = getDbConnection();
 
-$slugEsc = mysqli_real_escape_string($conn, $genreSlug);
-$genreResult = mysqli_query($conn, "SELECT id, name, slug FROM genres WHERE slug = '{$slugEsc}' LIMIT 1");
-if (!$genreResult || mysqli_num_rows($genreResult) === 0) {
+$stmt = $conn->prepare("SELECT id, name, slug FROM genres WHERE slug = ? LIMIT 1");
+$stmt->execute([$genreSlug]);
+$genre = $stmt->fetch();
+if (!$genre) {
     $pageTitle = 'Genre Not Found';
     $breadcrumb = ['Home' => 'index.php', 'Genre' => null];
     require_once __DIR__ . '/includes/header.php';
@@ -22,7 +23,6 @@ if (!$genreResult || mysqli_num_rows($genreResult) === 0) {
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
-$genre = mysqli_fetch_assoc($genreResult);
 $genreId = (int) $genre['id'];
 
 $page = max(1, (int) (isset($_GET['page']) ? $_GET['page'] : 1));
@@ -30,10 +30,12 @@ $perPage = defined('MOVIES_PER_PAGE') ? MOVIES_PER_PAGE : 24;
 $offset = ($page - 1) * $perPage;
 
 $countSql = "SELECT COUNT(*) AS total FROM movies m INNER JOIN movie_genres mg ON mg.movie_id = m.id AND mg.genre_id = {$genreId}";
-$totalResult = mysqli_query($conn, $countSql);
 $total = 0;
-if ($totalResult && $row = mysqli_fetch_assoc($totalResult)) {
-    $total = (int) $row['total'];
+try {
+    $totalStmt = $conn->query($countSql);
+    $total = (int) $totalStmt->fetchColumn();
+} catch (PDOException $e) {
+    $total = 0;
 }
 $totalPages = $total > 0 ? (int) ceil($total / $perPage) : 0;
 
@@ -42,12 +44,12 @@ $sql = "SELECT m.id, m.title, m.year, m.rated, m.runtime, m.plot, m.poster
         INNER JOIN movie_genres mg ON mg.movie_id = m.id AND mg.genre_id = {$genreId}
         ORDER BY m.year DESC, m.title
         LIMIT {$perPage} OFFSET {$offset}";
-$result = mysqli_query($conn, $sql);
 $movies = [];
-if ($result) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $movies[] = $row;
-    }
+try {
+    $stmt = $conn->query($sql);
+    $movies = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $movies = [];
 }
 
 $pageTitle = $genre['name'];

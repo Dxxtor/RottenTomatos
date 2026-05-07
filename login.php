@@ -31,9 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!checkLoginAttempts($username)) {
             $error = 'Too many login attempts. Please try again later.';
         } else {
-            $usernameEsc = mysqli_real_escape_string($conn, $username);
-            $result = mysqli_query($conn, "SELECT id, username, password, role FROM users WHERE username = '$usernameEsc' LIMIT 1");
-            if ($result && $row = mysqli_fetch_assoc($result)) {
+            $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            $row = $stmt->fetch();
+            if ($row) {
                 if (password_verify($password, $row['password'])) {
                     // Login successful — reset attempts and store user info
                     resetLoginAttempts($username);

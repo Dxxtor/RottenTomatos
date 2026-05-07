@@ -31,8 +31,10 @@ if (isset($_GET['watchlist'])) {
 }
 
 // Fetch movie
-$result = mysqli_query($conn, "SELECT * FROM movies WHERE id = $movieId LIMIT 1");
-if (!$result || mysqli_num_rows($result) === 0) {
+$stmt = $conn->prepare("SELECT * FROM movies WHERE id = ? LIMIT 1");
+$stmt->execute([$movieId]);
+$movie = $stmt->fetch();
+if (!$movie) {
     $pageTitle = 'Movie Not Found';
     $breadcrumb = ['Movies' => 'index.php', 'Not Found' => null];
     require_once __DIR__ . '/includes/header.php';
@@ -40,24 +42,29 @@ if (!$result || mysqli_num_rows($result) === 0) {
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
-$movie = mysqli_fetch_assoc($result);
 
 // Fetch genres for this movie
-$genreResult = mysqli_query($conn, "SELECT g.name, g.slug FROM genres g INNER JOIN movie_genres mg ON mg.genre_id = g.id WHERE mg.movie_id = $movieId ORDER BY g.name");
 $movieGenres = [];
-if ($genreResult) {
-    while ($row = mysqli_fetch_assoc($genreResult)) {
-        $movieGenres[] = $row;
-    }
+try {
+    $stmt = $conn->query("SELECT g.name, g.slug FROM genres g INNER JOIN movie_genres mg ON mg.genre_id = g.id WHERE mg.movie_id = $movieId ORDER BY g.name");
+    $movieGenres = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $movieGenres = [];
 }
 
 // Average user rating from reviews
-$avgResult = mysqli_query($conn, "SELECT AVG(rating) AS avg_rating, COUNT(*) AS review_count FROM reviews WHERE movie_id = $movieId");
 $avgRating = 0;
 $reviewCount = 0;
-if ($avgResult && $row = mysqli_fetch_assoc($avgResult)) {
-    $avgRating = $row['avg_rating'] ? round((float)$row['avg_rating'], 1) : 0;
-    $reviewCount = (int)$row['review_count'];
+try {
+    $stmt = $conn->query("SELECT AVG(rating) AS avg_rating, COUNT(*) AS review_count FROM reviews WHERE movie_id = $movieId");
+    $row = $stmt->fetch();
+    if ($row) {
+        $avgRating = $row['avg_rating'] ? round((float)$row['avg_rating'], 1) : 0;
+        $reviewCount = (int)$row['review_count'];
+    }
+} catch (PDOException $e) {
+    $avgRating = 0;
+    $reviewCount = 0;
 }
 
 // Check if movie is in watchlist

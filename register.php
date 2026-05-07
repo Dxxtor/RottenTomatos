@@ -38,17 +38,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Passwords do not match.';
         } else {
         // Check if username already exists
-        $usernameEsc = mysqli_real_escape_string($conn, $username);
-        $check = mysqli_query($conn, "SELECT id FROM users WHERE username = '$usernameEsc' LIMIT 1");
-        if ($check && mysqli_num_rows($check) > 0) {
+        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? LIMIT 1");
+        $stmt->execute([$username]);
+        if ($stmt->fetch()) {
             $error = 'Username already taken.';
         } else {
             // Hash the password and insert
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $emailEsc = mysqli_real_escape_string($conn, $email);
-            $hashEsc = mysqli_real_escape_string($conn, $hash);
-            $sql = "INSERT INTO users (username, password, email, role) VALUES ('$usernameEsc', '$hashEsc', '$emailEsc', 'user')";
-            if (mysqli_query($conn, $sql)) {
+            $stmt = $conn->prepare("INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, 'user')");
+            if ($stmt->execute([$username, $hash, $email])) {
                 $success = 'Account created! You can now login.';
             } else {
                 $error = 'Could not create account. Please try again.';

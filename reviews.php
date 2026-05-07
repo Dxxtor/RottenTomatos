@@ -40,11 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_review'])) {
     }
 
     if ($valid) {
-        // Escape user input before putting into SQL (prevents SQL injection)
-        $authorEsc = mysqli_real_escape_string($conn, $authorName);
-        $commentEsc = mysqli_real_escape_string($conn, $comment);
-        $sql = "INSERT INTO reviews (movie_id, author_name, rating, comment) VALUES ({$movieId}, '{$authorEsc}', {$rating}, '{$commentEsc}')";
-        if (mysqli_query($conn, $sql)) {
+        $stmt = $conn->prepare("INSERT INTO reviews (movie_id, author_name, rating, comment) VALUES (?, ?, ?, ?)");
+        if ($stmt->execute([$movieId, $authorName, $rating, $comment])) {
             $message = 'Review added successfully.';
             $messageType = 'success';
         } else {
@@ -70,21 +67,21 @@ if ($filterMovieId > 0) {
             INNER JOIN movies m ON m.id = r.movie_id
             ORDER BY r.created_at DESC";
 }
-$result = mysqli_query($conn, $sql);
 $reviews = [];
-if ($result) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $reviews[] = $row;
-    }
+try {
+    $stmt = $conn->query($sql);
+    $reviews = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $reviews = [];
 }
 
 // Load all movies for the "Add review" form dropdown
-$moviesResult = mysqli_query($conn, "SELECT id, title FROM movies ORDER BY title");
 $movies = [];
-if ($moviesResult) {
-    while ($row = mysqli_fetch_assoc($moviesResult)) {
-        $movies[] = $row;
-    }
+try {
+    $stmt = $conn->query("SELECT id, title FROM movies ORDER BY title");
+    $movies = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $movies = [];
 }
 
 $pageTitle = 'Reviews';
