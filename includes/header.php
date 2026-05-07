@@ -11,13 +11,12 @@ require_once __DIR__ . '/../config.php';
 // Άνοιγμα σύνδεσης με τη MySQL ώστε να φορτώσουμε τη λίστα των ειδών για το μενού
 $conn = getDbConnection();
 // Εκτέλεση ερωτήματος: λήψη id, name, και slug για κάθε είδος, ταξινομημένα κατά όνομα
-$genresQuery = mysqli_query($conn, "SELECT id, name, slug FROM genres ORDER BY name");
 $genres = [];
-if ($genresQuery) {
-    // Η mysqli_fetch_assoc() επιστρέφει μία γραμμή ως associative array (όνομα στήλης => τιμή)
-    while ($row = mysqli_fetch_assoc($genresQuery)) {
-        $genres[] = $row;
-    }
+try {
+    $stmt = $conn->query("SELECT id, name, slug FROM genres ORDER BY name");
+    $genres = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // No genres available
 }
 // Αν η σελίδα δεν όρισε $pageTitle, χρησιμοποιούμε το όνομα του site ώστε το <title> να μην είναι ποτέ κενό
 if (empty($pageTitle)) {
