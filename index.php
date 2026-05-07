@@ -11,12 +11,12 @@ $conn = getDbConnection();
 
 // Get carousel movies (6 random movies with real posters for the carousel)
 $carouselSql = "SELECT id, title, year, rated, runtime, plot, poster FROM movies WHERE poster IS NOT NULL AND poster != '' AND poster NOT LIKE '%placeholder%' ORDER BY RAND() LIMIT 6";
-$carouselResult = mysqli_query($conn, $carouselSql);
 $carouselMovies = [];
-if ($carouselResult) {
-    while ($row = mysqli_fetch_assoc($carouselResult)) {
-        $carouselMovies[] = $row;
-    }
+try {
+    $stmt = $conn->query($carouselSql);
+    $carouselMovies = $stmt->fetchAll();
+} catch (PDOException $e) {
+    // No carousel movies
 }
 
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -25,7 +25,7 @@ $perPage = defined('MOVIES_PER_PAGE') ? MOVIES_PER_PAGE : 24;
 $offset = ($page - 1) * $perPage;
 
 if ($search !== '') {
-    $searchEsc = mysqli_real_escape_string($conn, $search);
+    $searchEsc = str_replace(['%', '_'], ['\%', '\_'], $search); // Basic escaping for PDO
     $where = "WHERE m.title LIKE '%{$searchEsc}%' OR m.plot LIKE '%{$searchEsc}%'";
     $orderLimit = "ORDER BY m.year DESC, m.title LIMIT {$perPage} OFFSET {$offset}";
     $countSql = "SELECT COUNT(*) AS total FROM movies m {$where}";
@@ -35,28 +35,30 @@ if ($search !== '') {
     $sql = "SELECT id, title, year, rated, runtime, plot, poster FROM movies ORDER BY year DESC, title LIMIT {$perPage} OFFSET {$offset}";
 }
 
-$totalResult = mysqli_query($conn, $countSql);
 $total = 0;
-if ($totalResult && $row = mysqli_fetch_assoc($totalResult)) {
-    $total = (int) $row['total'];
+try {
+    $totalStmt = $conn->query($countSql);
+    $total = (int) $totalStmt->fetchColumn();
+} catch (PDOException $e) {
+    $total = 0;
 }
 $totalPages = $total > 0 ? (int) ceil($total / $perPage) : 0;
 
-$result = mysqli_query($conn, $sql);
 $movies = [];
-if ($result) {
-    while ($row = mysqli_fetch_assoc($result)) {
-        $movies[] = $row;
-    }
+try {
+    $stmt = $conn->query($sql);
+    $movies = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $movies = [];
 }
 
 // Fetch latest blog posts for sidebar
 $blogPosts = [];
-$blogResult = mysqli_query($conn, "SELECT bp.id, bp.title, bp.content, bp.created_at, u.username FROM blog_posts bp INNER JOIN users u ON u.id = bp.user_id ORDER BY bp.created_at DESC LIMIT 5");
-if ($blogResult) {
-    while ($row = mysqli_fetch_assoc($blogResult)) {
-        $blogPosts[] = $row;
-    }
+try {
+    $blogStmt = $conn->query("SELECT bp.id, bp.title, bp.content, bp.created_at, u.username FROM blog_posts bp INNER JOIN users u ON u.id = bp.user_id ORDER BY bp.created_at DESC LIMIT 5");
+    $blogPosts = $blogStmt->fetchAll();
+} catch (PDOException $e) {
+    $blogPosts = [];
 }
 ?>
 <div class="container py-4">

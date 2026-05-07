@@ -106,29 +106,37 @@ function getPosterSrc($poster) {
 }
 
 // =============================================================================
-// getDbConnection() - Create and return a MySQL connection
+// getDbConnection() - Create and return a MySQL connection using PDO
 // =============================================================================
 function getDbConnection() {
-    $conn = @mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-    if ($conn) {
-        mysqli_set_charset($conn, 'utf8mb4');
-        return $conn;
+    $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+    if (defined('DB_PORT') && DB_PORT != 3306) {
+        $dsn = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4";
     }
-    // If "Unknown database", create it and connect again
-    if (mysqli_connect_errno() && strpos(mysqli_connect_error(), 'Unknown database') !== false) {
-        $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS);
-        if (!$conn) {
-            die('Database connection failed: ' . mysqli_connect_error());
+    
+    try {
+        $pdo = new PDO($dsn, DB_USER, DB_PASS);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        return $pdo;
+    } catch (PDOException $e) {
+        // If database doesn't exist, try to create it
+        if (strpos($e->getMessage(), 'Unknown database') !== false) {
+            try {
+                $dsnNoDb = "mysql:host=" . DB_HOST . ";charset=utf8mb4";
+                if (defined('DB_PORT') && DB_PORT != 3306) {
+                    $dsnNoDb = "mysql:host=" . DB_HOST . ";port=" . DB_PORT . ";charset=utf8mb4";
+                }
+                $pdo = new PDO($dsnNoDb, DB_USER, DB_PASS);
+                $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . DB_NAME . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                $pdo->exec("USE `" . DB_NAME . "`");
+                return $pdo;
+            } catch (PDOException $e2) {
+                die('Database connection failed: ' . $e2->getMessage());
+            }
         }
-        $name = mysqli_real_escape_string($conn, DB_NAME);
-        $sql = "CREATE DATABASE `{$name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
-        if (mysqli_query($conn, $sql)) {
-            mysqli_select_db($conn, DB_NAME);
-            mysqli_set_charset($conn, 'utf8mb4');
-            return $conn;
-        }
+        die('Database connection failed: ' . $e->getMessage());
     }
-    die('Database connection failed: ' . mysqli_connect_error());
 }
 
 // =============================================================================
